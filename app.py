@@ -126,7 +126,10 @@ def image_to_base64(image):
     image.save(buffered, format="PNG")
     buffered.seek(0)
     return base64.b64encode(buffered.getvalue()).decode()
-
+@app.route('/check-json')
+def check_json():
+    return jsonify({"status": "success", "message": "Flask Sign Finger app is running!"})
+    
 @app.route('/generate_images', methods=['POST'])
 def generate_images():
     data = request.json
