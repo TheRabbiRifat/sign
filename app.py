@@ -1,4 +1,3 @@
-# Import necessary libraries
 from flask import Flask, jsonify, request
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import random
@@ -8,18 +7,13 @@ import base64
 
 app = Flask(__name__)
 
-# Words to exclude in both languages
+# Words to exclude in Bengali
 EXCLUDED_WORDS_BN = ["মোহাম্মদ", "মোঃ"]
-EXCLUDED_WORDS_EN = ["Md", "Mohammad", "Mohammed"]
 
-# Function to get a random font (adjust paths if needed)
-def get_random_font(language):
-    english_fonts = ["arial.ttf", "times.ttf"]  # Add paths to your English fonts
-    bengali_fonts = ["Kobiguru.ttf", "Kobiguru.ttf"]  # Add paths to your Bengali fonts
-    if language == "bn":
-        font_path = random.choice(bengali_fonts)
-    else:
-        font_path = random.choice(english_fonts)
+# Function to get a random Bengali font (adjust paths if needed)
+def get_random_font():
+    bengali_fonts = ["Kobiguru.ttf", "Siyamrupali.ttf"]  # Add paths to your Bengali fonts
+    font_path = random.choice(bengali_fonts)
 
     try:
         font = ImageFont.truetype(font_path, 40)
@@ -28,34 +22,19 @@ def get_random_font(language):
 
     return font
 
-# Function to check language based on date_of_birth and occupation
-def should_use_english(date_of_birth, occupation):
-    dob = datetime.strptime(date_of_birth, '%Y-%m-%d')
-    return dob.year > 1980 and (occupation == "ছাত্র-ছাত্রী" or occupation == "বেসরকারি চাকরিজীবী")
-
 # Function to filter out excluded words from the name
-def filter_excluded_words(name, language):
-    if language == "bn":
-        words = [word for word in name.split() if word not in EXCLUDED_WORDS_BN]
-    else:
-        words = [word for word in name.split() if word not in EXCLUDED_WORDS_EN]
+def filter_excluded_words(name):
+    words = [word for word in name.split() if word not in EXCLUDED_WORDS_BN]
     return " ".join(words)
 
-# Shortens the name based on language and length
-def get_shortened_name(name, language):
-    name = filter_excluded_words(name, language)
-    if language == "bn":
-        if len(name) <= 12:
-            return name
-        else:
-            words = name.split()
-            return words[0] if len(words[0]) <= 12 else words[-1]
+# Shortens the name based on length
+def get_shortened_name(name):
+    name = filter_excluded_words(name)
+    if len(name) <= 12:
+        return name
     else:
-        if len(name) <= 8:
-            return name
-        else:
-            words = name.split()
-            return words[0] if len(words[0]) <= 8 else words[-1]
+        words = name.split()
+        return words[0] if len(words[0]) <= 12 else words[-1]
 
 # Generate fingerprint variation (add valid image paths)
 def generate_fingerprint_variation():
@@ -82,17 +61,15 @@ def generate_fingerprint_variation():
     return modified_image
 
 # Generate text image
-def text_to_image(bengali_text, english_text, date_of_birth, occupation):
+def text_to_image(bengali_text):
     width, height = 260, 130
     background_color = "white"
 
     # Create text image
     img = Image.new('RGBA', (width, height), background_color)
 
-    language = "en" if should_use_english(date_of_birth, occupation) else "bn"
-    text = english_text if language == "en" else bengali_text
-    font = get_random_font(language)
-    text = get_shortened_name(text, language)
+    text = get_shortened_name(bengali_text)
+    font = get_random_font()
 
     text_img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(text_img)
@@ -126,6 +103,7 @@ def image_to_base64(image):
     image.save(buffered, format="PNG")
     buffered.seek(0)
     return base64.b64encode(buffered.getvalue()).decode()
+
 @app.route('/check-json')
 def check_json():
     return jsonify({"status": "success", "message": "Flask Sign Finger app is running!"})
@@ -134,12 +112,9 @@ def check_json():
 def generate_images():
     data = request.json
     bengali_text = data.get('bengali_text', '')
-    english_text = data.get('english_text', '')
-    date_of_birth = data.get('date_of_birth', '')
-    occupation = data.get('occupation', '')
 
     # Generate text image
-    text_image_base64 = text_to_image(bengali_text, english_text, date_of_birth, occupation)
+    text_image_base64 = text_to_image(bengali_text)
 
     # Generate fingerprint image
     fingerprint_image = generate_fingerprint_variation()
@@ -158,4 +133,3 @@ def generate_images():
 # Start Flask app on 0.0.0.0 so it can be accessed externally
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
-          
