@@ -15,7 +15,7 @@ EXCLUDED_WORDS_EN = ["Md", "Mohammad", "Mohammed"]
 # Function to get a random font (adjust paths if needed)
 def get_random_font(language):
     english_fonts = ["arial.ttf", "times.ttf"]  # Add paths to your English fonts
-    bengali_fonts = ["Kobiguru.ttf", "Kobiguru.ttf"]  # Add paths to your Bengali fonts
+    bengali_fonts = ["sign_v1.ttf", "sign_v1.ttf"]  # Add paths to your Bengali fonts
     if language == "bn":
         font_path = random.choice(bengali_fonts)
     else:
