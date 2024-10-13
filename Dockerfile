@@ -1,46 +1,20 @@
-# Use an official Python runtime as a parent image
+# Use the official Python image from the Docker Hub
 FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
-
-# Update system and install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository universe \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-    build-essential \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libgdk-pixbuf2.0-dev \
-    libffi-dev \
-    libjpeg-dev \
-    zlib1g-dev \
-    libfreetype6-dev \
-    liblcms2-dev \
-    libopenjp2-7 \
-    libtiff5 \
-    libwebp-dev \
-    git \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy the requirements file into the container
+COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+# Install the dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port Flask runs on
+# Copy the rest of your application code into the container
+COPY . .
+
+# Expose the port the app runs on
 EXPOSE 5000
 
-# Run the Flask app
+# Define the command to run your application
 CMD ["python", "app.py"]
