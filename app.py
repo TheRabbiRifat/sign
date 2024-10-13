@@ -1,9 +1,12 @@
 from flask import Flask, jsonify, request
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 import random
+from PIL import Image, ImageFilter, ImageEnhance
 from datetime import datetime
 import io
 import base64
+import cairocffi as cairo
+import pangocffi as pango
+import pangocffi.pangocairo
 
 app = Flask(__name__)
 
@@ -12,15 +15,8 @@ EXCLUDED_WORDS_BN = ["মোহাম্মদ", "মোঃ"]
 
 # Function to get a random Bengali font (adjust paths if needed)
 def get_random_font():
-    bengali_fonts = ["sing_v1.ttf", "sing_v1.ttf"]  # Add paths to your Bengali fonts
-    font_path = random.choice(bengali_fonts)
-
-    try:
-        font = ImageFont.truetype(font_path, 40)
-    except IOError:
-        font = ImageFont.load_default()
-
-    return font
+    bengali_fonts = ["sing_v1.ttf", "sing_v1.ttf"]  # Path to your Bengali font
+    return random.choice(bengali_fonts)
 
 # Function to filter out excluded words from the name
 def filter_excluded_words(name):
@@ -38,8 +34,8 @@ def get_shortened_name(name):
 
 # Generate fingerprint variation (add valid image paths)
 def generate_fingerprint_variation():
-    # You can upload or use valid image paths in Colab
-    fingerprint_samples = ['finger_1.jpg', 'finger_2.jpg']  # Add valid paths for Colab
+    # You can upload or use valid image paths
+    fingerprint_samples = ['finger_1.jpg', 'finger_2.jpg']  # Add valid paths
     sample_image_path = random.choice(fingerprint_samples)
     sample_image = Image.open(sample_image_path)
 
@@ -60,57 +56,53 @@ def generate_fingerprint_variation():
 
     return modified_image
 
-# Generate text image with UTF-8 support
+# Generate text image with UTF-8 support using Pango and Cairo
 def text_to_image(bengali_text):
     # Ensure the text is properly encoded in UTF-8
     bengali_text = bengali_text.encode('utf-8').decode('utf-8')
 
+    # Image size
     width, height = 260, 130
-    background_color = "white"
+    background_color = (255, 255, 255)  # White background
 
-    # Create a blank image with RGBA mode
-    img = Image.new('RGBA', (width, height), background_color)
+    # Create a Cairo surface to render text
+    surface = cairo.ImageSurface(cairo.FORMAT_RGB24, width, height)
+    context = cairo.Context(surface)
 
-    # Filter and shorten the Bengali text as needed
-    text = get_shortened_name(bengali_text)
-    
-    # Get the appropriate font
-    font = get_random_font()
+    # Set background color
+    context.set_source_rgb(1, 1, 1)  # White
+    context.paint()
 
-    # Create a text image layer
-    text_img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(text_img)
+    # Set text color
+    context.set_source_rgb(0, 0, 0)  # Black
 
-    # Calculate text size and position
-    text_bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = text_bbox[2] - text_bbox[0]
-    text_height = text_bbox[3] - text_bbox[1]
-    position = ((width - text_width) // 2, (height - text_height) // 2)
+    # Create a Pango layout and set the font
+    layout = pangocffi.pangocairo.create_layout(context)
+    layout.set_text(bengali_text, -1)
 
-    # Render the text on the image using the draw object
-    draw.text(position, text, font=font, fill=(0, 0, 0, 200))
-    
-    # Add random slight rotation for a natural look
-    angle = random.uniform(-2, 2)
-    rotated_text_img = text_img.rotate(angle, expand=1, resample=Image.BICUBIC)
+    # Set font properties using the `sing_v1.ttf` font
+    font_description = pango.FontDescription("sing_v1 40")  # Use your Bengali font here
+    layout.set_font_description(font_description)
 
-    # Recalculate the new position after rotation
-    rotated_width, rotated_height = rotated_text_img.size
-    paste_position = ((width - rotated_width) // 2, (height - rotated_height) // 2)
+    # Get the size of the rendered text and position it at the center
+    text_width, text_height = layout.get_size()
+    text_width /= pango.SCALE
+    text_height /= pango.SCALE
 
-    # Paste the rotated text image onto the base image
-    img.paste(rotated_text_img, paste_position, rotated_text_img)
+    # Calculate position for centering the text
+    x = (width - text_width) / 2
+    y = (height - text_height) / 2
 
-    # Convert to RGB before saving
-    img = img.convert("RGB")
+    # Render the text at the calculated position
+    context.move_to(x, y)
+    pangocffi.pangocairo.show_layout(context, layout)
 
-    # Save the image to a bytes buffer
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    buffered.seek(0)
+    # Convert to base64 for output
+    output = io.BytesIO()
+    surface.write_to_png(output)
+    output.seek(0)
 
-    # Return the base64 encoded string
-    return base64.b64encode(buffered.getvalue()).decode()
+    return base64.b64encode(output.getvalue()).decode()
 
 # Convert image to base64
 def image_to_base64(image):
@@ -141,7 +133,7 @@ def generate_images():
 
     # Return the images as Data URIs in JSON response
     return jsonify({
-        'sign': text_image_data_uri ,
+        'sign': text_image_data_uri,
         'fingerprint': fingerprint_image_data_uri
     })
 
