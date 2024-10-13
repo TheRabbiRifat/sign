@@ -6,7 +6,8 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
 # Update system and install system dependencies
-RUN apt-get update \
+RUN apt-get update --allow-releaseinfo-change \
+    && apt-get update -o Acquire::Retries=3 \
     && apt-get install -y --no-install-recommends \
     build-essential \
     libcairo2-dev \
