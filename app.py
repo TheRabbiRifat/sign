@@ -60,41 +60,56 @@ def generate_fingerprint_variation():
 
     return modified_image
 
-# Generate text image
+# Generate text image with UTF-8 support
 def text_to_image(bengali_text):
+    # Ensure the text is properly encoded in UTF-8
+    bengali_text = bengali_text.encode('utf-8').decode('utf-8')
+
     width, height = 260, 130
     background_color = "white"
 
-    # Create text image
+    # Create a blank image with RGBA mode
     img = Image.new('RGBA', (width, height), background_color)
 
+    # Filter and shorten the Bengali text as needed
     text = get_shortened_name(bengali_text)
+    
+    # Get the appropriate font
     font = get_random_font()
 
+    # Create a text image layer
     text_img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(text_img)
 
+    # Calculate text size and position
     text_bbox = draw.textbbox((0, 0), text, font=font)
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
     position = ((width - text_width) // 2, (height - text_height) // 2)
 
+    # Render the text on the image using the draw object
     draw.text(position, text, font=font, fill=(0, 0, 0, 200))
+    
+    # Add random slight rotation for a natural look
     angle = random.uniform(-2, 2)
     rotated_text_img = text_img.rotate(angle, expand=1, resample=Image.BICUBIC)
 
+    # Recalculate the new position after rotation
     rotated_width, rotated_height = rotated_text_img.size
     paste_position = ((width - rotated_width) // 2, (height - rotated_height) // 2)
 
+    # Paste the rotated text image onto the base image
     img.paste(rotated_text_img, paste_position, rotated_text_img)
 
+    # Convert to RGB before saving
     img = img.convert("RGB")
 
-    # Save image to a bytes buffer
+    # Save the image to a bytes buffer
     buffered = io.BytesIO()
     img.save(buffered, format="PNG")
     buffered.seek(0)
 
+    # Return the base64 encoded string
     return base64.b64encode(buffered.getvalue()).decode()
 
 # Convert image to base64
