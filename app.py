@@ -1,12 +1,9 @@
 from flask import Flask, jsonify, request
 import random
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 from datetime import datetime
 import io
 import base64
-import cairocffi as cairo
-import pangocffi as pango
-import pangocffi.pangocairo
 
 app = Flask(__name__)
 
@@ -15,7 +12,7 @@ EXCLUDED_WORDS_BN = ["মোহাম্মদ", "মোঃ"]
 
 # Function to get a random Bengali font (adjust paths if needed)
 def get_random_font():
-    bengali_fonts = ["sing_v1.ttf", "sing_v1.ttf"]  # Path to your Bengali font
+    bengali_fonts = ["sing_v1.ttf"]  # Path to your Bengali font
     return random.choice(bengali_fonts)
 
 # Function to filter out excluded words from the name
@@ -56,7 +53,7 @@ def generate_fingerprint_variation():
 
     return modified_image
 
-# Generate text image with UTF-8 support using Pango and Cairo
+# Generate text image with UTF-8 support using PIL
 def text_to_image(bengali_text):
     # Ensure the text is properly encoded in UTF-8
     bengali_text = bengali_text.encode('utf-8').decode('utf-8')
@@ -65,41 +62,25 @@ def text_to_image(bengali_text):
     width, height = 260, 130
     background_color = (255, 255, 255)  # White background
 
-    # Create a Cairo surface to render text
-    surface = cairo.ImageSurface(cairo.FORMAT_RGB24, width, height)
-    context = cairo.Context(surface)
+    # Create a new image with white background
+    image = Image.new('RGB', (width, height), background_color)
+    draw = ImageDraw.Draw(image)
 
-    # Set background color
-    context.set_source_rgb(1, 1, 1)  # White
-    context.paint()
-
-    # Set text color
-    context.set_source_rgb(0, 0, 0)  # Black
-
-    # Create a Pango layout and set the font
-    layout = pangocffi.pangocairo.create_layout(context)
-    layout.set_text(bengali_text, -1)
-
-    # Set font properties using the `sing_v1.ttf` font
-    font_description = pango.FontDescription("sing_v1 40")  # Use your Bengali font here
-    layout.set_font_description(font_description)
-
-    # Get the size of the rendered text and position it at the center
-    text_width, text_height = layout.get_size()
-    text_width /= pango.SCALE
-    text_height /= pango.SCALE
+    # Load the Bengali font
+    font_path = get_random_font()  # Path to your font file
+    font = ImageFont.truetype(font_path, 40)  # Set font size
 
     # Calculate position for centering the text
-    x = (width - text_width) / 2
-    y = (height - text_height) / 2
+    text_width, text_height = draw.textsize(bengali_text, font=font)
+    x = (width - text_width) // 2
+    y = (height - text_height) // 2
 
-    # Render the text at the calculated position
-    context.move_to(x, y)
-    pangocffi.pangocairo.show_layout(context, layout)
+    # Draw the text
+    draw.text((x, y), bengali_text, font=font, fill=(0, 0, 0))  # Black text
 
     # Convert to base64 for output
     output = io.BytesIO()
-    surface.write_to_png(output)
+    image.save(output, format="PNG")
     output.seek(0)
 
     return base64.b64encode(output.getvalue()).decode()
@@ -114,7 +95,7 @@ def image_to_base64(image):
 @app.route('/check-json')
 def check_json():
     return jsonify({"status": "success", "message": "Flask Sign Finger app is running!"})
-    
+
 @app.route('/generate_images', methods=['POST'])
 def generate_images():
     data = request.json
