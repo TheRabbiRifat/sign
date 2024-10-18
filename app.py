@@ -12,7 +12,7 @@ EXCLUDED_WORDS_BN = ["মোহাম্মদ", "মোঃ"]
 
 # Function to get a random Bengali font (adjust paths if needed)
 def get_random_font():
-    bengali_fonts = ["sign_v2.ttf", "sign_v2.ttf"]  # Add paths to your Bengali fonts
+    bengali_fonts = ["sign_v1.ttf", "sign_v2.ttf", "Kobiguru.ttf"]  # Add paths to your Bengali fonts
     font_path = random.choice(bengali_fonts)
 
     try:
